@@ -1,9 +1,7 @@
 from django.urls import path
 
-import views
+# import views
 
 urlpatterns = [
-    path('/',
-         # views..as_view()
-         ),
+    # path('/', views..as_view()),
 ]
