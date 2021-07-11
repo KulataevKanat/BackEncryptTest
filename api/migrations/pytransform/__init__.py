@@ -1,20 +1,11 @@
-# These module alos are used by protection code, so that protection
-# code needn't import anything
 import os
 import platform
-import sys
 import struct
-
-# Because ctypes is new from Python 2.5, so pytransform doesn't work
-# before Python 2.5
-#
+import sys
 from ctypes import cdll, c_char, c_char_p, c_int, c_void_p, \
     pythonapi, py_object, PYFUNCTYPE, CFUNCTYPE
 from fnmatch import fnmatch
 
-#
-# Support Platforms
-#
 plat_path = 'platforms'
 
 plat_table = (
@@ -27,7 +18,7 @@ plat_table = (
 )
 
 arch_table = (
-    ('x86', ('i?86', )),
+    ('x86', ('i?86',)),
     ('x86_64', ('x64', 'x86_64', 'amd64', 'intel')),
     ('arm', ('armv5',)),
     ('armv6', ('armv6l',)),
@@ -38,14 +29,8 @@ arch_table = (
     ('aarch64', ('aarch64', 'arm64'))
 )
 
-#
-# Hardware type
-#
 HT_HARDDISK, HT_IFMAC, HT_IPV4, HT_IPV6, HT_DOMAIN = range(5)
 
-#
-# Global
-#
 _pytransform = None
 
 
@@ -56,6 +41,7 @@ class PytransformError(Exception):
 def dllmethod(func):
     def wrap(*args, **kwargs):
         return func(*args, **kwargs)
+
     return wrap
 
 
@@ -69,8 +55,6 @@ def version_info():
 @dllmethod
 def init_pytransform():
     major, minor = sys.version_info[0:2]
-    # Python2.5 no sys.maxsize but sys.maxint
-    # bitness = 64 if sys.maxsize > 2**32 else 32
     prototype = PYFUNCTYPE(c_int, c_int, c_int, c_void_p)
     init_module = prototype(('init_module', _pytransform))
     ret = init_module(major, minor, pythonapi._handle)
@@ -154,8 +138,8 @@ def get_hd_info(hdtype, name=None):
     buf = t_buf()
     cname = c_char_p(0 if name is None
                      else name.encode('utf-8') if hasattr('name', 'encode')
-                     else name)
-    if (_pytransform.get_hd_info(hdtype, buf, size, cname) == -1):
+    else name)
+    if _pytransform.get_hd_info(hdtype, buf, size, cname) == -1:
         raise PytransformError('Get hardware information failed')
     return buf.value.decode()
 
@@ -172,7 +156,9 @@ def assert_armored(*names):
         def wrap_execute(*args, **kwargs):
             dlfunc(names)
             return func(*args, **kwargs)
+
         return wrap_execute
+
     return wrapper
 
 
@@ -200,7 +186,7 @@ def get_license_info():
     if rcode.startswith('*VERSION:'):
         index = rcode.find('\n')
         info['ISSUER'] = rcode[9:index].split('.')[0].replace('-sn-1.txt', '')
-        rcode = rcode[index+1:]
+        rcode = rcode[index + 1:]
 
     index = 0
     if rcode.startswith('*TIME:'):
@@ -225,7 +211,7 @@ def get_license_info():
     info['CODE'] = rcode[start:]
     i = info['CODE'].find(';')
     if i > 0:
-        info['DATA'] = info['CODE'][i+1:]
+        info['DATA'] = info['CODE'][i + 1:]
         info['CODE'] = info['CODE'][:i]
     return info
 
@@ -289,7 +275,6 @@ def format_platform(platid=None):
     return os.path.join(plat, mach)
 
 
-# Load _pytransform library
 def _load_library(path=None, is_runtime=0, platid=None, suffix='', advanced=0):
     path = os.path.dirname(__file__) if path is None \
         else os.path.normpath(path)
@@ -332,24 +317,17 @@ def _load_library(path=None, is_runtime=0, platid=None, suffix='', advanced=0):
             print('Load %s failed:\n%s' % (filename, e))
         raise
 
-    # Removed from v4.6.1
-    # if plat == 'linux':
-    #     m.set_option(-1, find_library('c').encode())
-
     if not os.path.abspath('.') == os.path.abspath(path):
         m.set_option(1, path.encode() if sys.version_info[0] == 3 else path)
 
-    # Required from Python3.6
     m.set_option(2, sys.byteorder.encode())
 
     if sys.flags.debug:
         m.set_option(3, c_char_p(1))
     m.set_option(4, c_char_p(not is_runtime))
 
-    # Disable advanced mode by default
     m.set_option(5, c_char_p(not advanced))
 
-    # Set suffix for private package
     if suffix:
         m.set_option(6, suffix.encode())
 
@@ -376,15 +354,6 @@ def pyarmor_runtime(path=None, suffix='', advanced=0):
         sys.exit(1)
 
 
-# ----------------------------------------------------------
-# End of pytransform
-# ----------------------------------------------------------
-
-#
-# Not available from v5.6
-#
-
-
 def generate_capsule(licfile):
     prikey, pubkey, prolic = _generate_project_capsule()
     capkey, newkey = _generate_pytransform_key(licfile, pubkey)
@@ -406,9 +375,6 @@ def _generate_pytransform_key(licfile, pubkey):
                   pubkey)
 
 
-#
-# Deprecated functions from v5.1
-#
 @dllmethod
 def encrypt_project_files(proname, filelist, mode=0):
     prototype = PYFUNCTYPE(c_int, c_char_p, py_object, c_int)
@@ -444,12 +410,10 @@ def generate_module_key(pubname, key):
     dlfunc = prototype(('generate_module_key', _pytransform))
     return dlfunc(pubname.encode(), t_key(*key), None)
 
-#
-# Compatible for PyArmor v3.0
-#
+
 @dllmethod
 def old_init_runtime(systrace=0, sysprofile=1, threadtrace=0, threadprofile=1):
-    '''Only for old version, before PyArmor 3'''
+    """Only for old version, before PyArmor 3"""
     pyarmor_init(is_runtime=1)
     prototype = PYFUNCTYPE(c_int, c_int, c_int, c_int, c_int)
     _init_runtime = prototype(('init_runtime', _pytransform))
@@ -458,7 +422,7 @@ def old_init_runtime(systrace=0, sysprofile=1, threadtrace=0, threadprofile=1):
 
 @dllmethod
 def import_module(modname, filename):
-    '''Only for old version, before PyArmor 3'''
+    """Only for old version, before PyArmor 3"""
     prototype = PYFUNCTYPE(py_object, c_char_p, c_char_p)
     _import_module = prototype(('import_module', _pytransform))
     return _import_module(modname.encode(), filename.encode())
@@ -466,7 +430,7 @@ def import_module(modname, filename):
 
 @dllmethod
 def exec_file(filename):
-    '''Only for old version, before PyArmor 3'''
+    """Only for old version, before PyArmor 3"""
     prototype = PYFUNCTYPE(c_int, c_char_p)
     _exec_file = prototype(('exec_file', _pytransform))
     return _exec_file(filename.encode())
