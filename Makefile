@@ -1,11 +1,8 @@
-makemigrate_api:
-	python manage.py makemigrations api
+makemigrate:
+	python manage.py makemigrations
 
-migrate_api:
-	python manage.py migrate api --database=default
-
-migrate_django_tables:
-	python manage.py migrate --database=default
+migrate:
+	python manage.py migrate
 
 run:
 	python manage.py runserver
